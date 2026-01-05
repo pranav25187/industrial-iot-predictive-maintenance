@@ -3,7 +3,7 @@
 An **end-to-end Industrial IoT Predictive Maintenance system** that predicts the **Remaining Useful Life (RUL)** of turbofan engines using **LSTM-based time-series modeling**, served via **FastAPI**, tracked with **MLflow**, and visualized through an interactive **Streamlit dashboard**.
 
 🔗 **Live Demo**:  
-👉 https://pranav25187-industrial-iot-predictive-dashboarddashboard-95zkcn.streamlit.app/
+👉 https://pranav25187-industrial-iot-predictive-dashboarddashboard-bm0yij.streamlit.app/
 
 ---
 
@@ -201,5 +201,6 @@ Aspiring **ML Engineer**
 ## 📜 License
 
 This project is intended for **educational and demonstration purposes**.
+
 
 
