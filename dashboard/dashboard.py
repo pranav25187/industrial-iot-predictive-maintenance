@@ -1,26 +1,33 @@
 import streamlit as st
 import numpy as np
-import requests
 import plotly.graph_objects as go
+import tensorflow as tf
+import joblib
+import os
 
-API_URL = "http://127.0.0.1:8000/predict"
-
-# -----------------------------
-# Page config
-# -----------------------------
 st.set_page_config(
     page_title="Industrial IoT Predictive Maintenance",
     layout="wide"
 )
 
+@st.cache_resource
+def load_assets():
+    model_path = os.path.join("models", "lstm_model.h5")
+    scaler_path = os.path.join("models", "scaler.pkl")
+    model = tf.keras.models.load_model(model_path)
+    scaler = joblib.load(scaler_path)
+    return model, scaler
+
+try:
+    model, scaler = load_assets()
+except Exception as e:
+    st.error(f"Error loading model/scaler: {e}")
+    st.stop()
+
 st.title("🛠 Industrial IoT Predictive Maintenance Dashboard")
 st.markdown("Predict Remaining Useful Life (RUL) using sensor time-series data")
 
-# -----------------------------
-# Sidebar
-# -----------------------------
 st.sidebar.header("Simulation Settings")
-
 engine_id = st.sidebar.number_input(
     "Engine ID",
     min_value=1,
@@ -28,11 +35,7 @@ engine_id = st.sidebar.number_input(
     value=1
 )
 
-# -----------------------------
-# Generate dummy sensor data
-# -----------------------------
 st.subheader("Sensor Input (Last 50 Cycles)")
-
 if st.button("Generate Sample Sensor Data"):
     sensor_data = np.random.rand(50, 17).tolist()
     st.session_state["sensor_data"] = sensor_data
@@ -43,11 +46,7 @@ if "sensor_data" not in st.session_state:
 
 sensor_data = np.array(st.session_state["sensor_data"])
 
-# -----------------------------
-# Sensor trend visualization
-# -----------------------------
 st.subheader("Sensor Trends")
-
 fig = go.Figure()
 for i in range(3):
     fig.add_trace(
@@ -57,65 +56,36 @@ for i in range(3):
             name=f"Sensor {i+1}"
         )
     )
-
-fig.update_layout(
-    xaxis_title="Cycle",
-    yaxis_title="Normalized Value",
-    height=350
-)
-
+fig.update_layout(xaxis_title="Cycle", yaxis_title="Normalized Value", height=350)
 st.plotly_chart(fig, use_container_width=True)
 
-# -----------------------------
-# Predict button
-# -----------------------------
 if st.button("🔍 Predict RUL"):
+    with st.spinner("Processing local inference..."):
+        input_data = sensor_data.reshape(1, 50, 17)
+        prediction = model.predict(input_data)
+        predicted_rul = int(prediction[0][0])
+        
+        if predicted_rul < 50:
+            status = "Danger"
+            recommendation = "Immediate Maintenance Required"
+        elif predicted_rul < 100:
+            status = "Warning"
+            recommendation = "Schedule Maintenance Soon"
+        else:
+            status = "Healthy"
+            recommendation = "No Action Needed"
 
-    payload = {
-        "engine_id": engine_id,
-        "sensor_readings": sensor_data.tolist()
-    }
-
-    with st.spinner("Calling predictive maintenance API..."):
-        response = requests.post(API_URL, json=payload)
-
-    if response.status_code != 200:
-        st.error("API Error — check FastAPI server")
-        st.stop()
-
-    result = response.json()
-
-    # -----------------------------
-    # Results
-    # -----------------------------
     st.subheader("Prediction Results")
-
     col1, col2, col3 = st.columns(3)
+    col1.metric("Predicted RUL (cycles)", f"{predicted_rul}")
+    col2.metric("Health Status", status)
+    col3.metric("Recommendation", recommendation)
 
-    col1.metric(
-        "Predicted RUL (cycles)",
-        f"{result['predicted_rul']}"
-    )
-
-    col2.metric(
-        "Health Status",
-        result["status"]
-    )
-
-    col3.metric(
-        "Recommendation",
-        result["recommendation"]
-    )
-
-    # -----------------------------
-    # RUL Gauge
-    # -----------------------------
     st.subheader("Remaining Useful Life Indicator")
-
     gauge = go.Figure(
         go.Indicator(
             mode="gauge+number",
-            value=result["predicted_rul"],
+            value=predicted_rul,
             gauge={
                 "axis": {"range": [0, 200]},
                 "bar": {"color": "darkblue"},
@@ -127,6 +97,5 @@ if st.button("🔍 Predict RUL"):
             },
         )
     )
-
     gauge.update_layout(height=350)
     st.plotly_chart(gauge, use_container_width=True)
