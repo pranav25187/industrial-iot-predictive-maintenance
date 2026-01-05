@@ -4,25 +4,28 @@ import plotly.graph_objects as go
 import tensorflow as tf
 import joblib
 import os
+from tensorflow.keras.layers import LSTM
 
-st.set_page_config(
-    page_title="Industrial IoT Predictive Maintenance",
-    layout="wide"
-)
+st.set_page_config(page_title="Industrial IoT Predictive Maintenance", layout="wide")
+
+class PatchedLSTM(LSTM):
+    def __init__(self, *args, **kwargs):
+        kwargs.pop("time_major", None)
+        super().__init__(*args, **kwargs)
 
 @st.cache_resource
 def load_assets():
     model_path = os.path.join("models", "lstm_model.h5")
     scaler_path = os.path.join("models", "scaler.pkl")
-    
-    # Load model without compiling to bypass version-specific LSTM arguments
-    model = tf.keras.models.load_model(model_path, compile=False)
-    
-    # Re-compile manually with basics to ensure it's ready for predict()
-    model.compile(optimizer='adam', loss='mse')
-    
+    model = tf.keras.models.load_model(
+        model_path,
+        compile=False,
+        custom_objects={"LSTM": PatchedLSTM}
+    )
+    model.compile(optimizer="adam", loss="mse")
     scaler = joblib.load(scaler_path)
     return model, scaler
+
 try:
     model, scaler = load_assets()
 except Exception as e:
@@ -33,17 +36,11 @@ st.title("🛠 Industrial IoT Predictive Maintenance Dashboard")
 st.markdown("Predict Remaining Useful Life (RUL) using sensor time-series data")
 
 st.sidebar.header("Simulation Settings")
-engine_id = st.sidebar.number_input(
-    "Engine ID",
-    min_value=1,
-    max_value=999,
-    value=1
-)
+engine_id = st.sidebar.number_input("Engine ID", min_value=1, max_value=999, value=1)
 
 st.subheader("Sensor Input (Last 50 Cycles)")
 if st.button("Generate Sample Sensor Data"):
-    sensor_data = np.random.rand(50, 17).tolist()
-    st.session_state["sensor_data"] = sensor_data
+    st.session_state["sensor_data"] = np.random.rand(50, 17).tolist()
 
 if "sensor_data" not in st.session_state:
     st.warning("Click 'Generate Sample Sensor Data' to proceed")
@@ -54,13 +51,7 @@ sensor_data = np.array(st.session_state["sensor_data"])
 st.subheader("Sensor Trends")
 fig = go.Figure()
 for i in range(3):
-    fig.add_trace(
-        go.Scatter(
-            y=sensor_data[:, i],
-            mode="lines",
-            name=f"Sensor {i+1}"
-        )
-    )
+    fig.add_trace(go.Scatter(y=sensor_data[:, i], mode="lines", name=f"Sensor {i+1}"))
 fig.update_layout(xaxis_title="Cycle", yaxis_title="Normalized Value", height=350)
 st.plotly_chart(fig, use_container_width=True)
 
@@ -69,7 +60,7 @@ if st.button("🔍 Predict RUL"):
         input_data = sensor_data.reshape(1, 50, 17)
         prediction = model.predict(input_data)
         predicted_rul = int(prediction[0][0])
-        
+
         if predicted_rul < 50:
             status = "Danger"
             recommendation = "Immediate Maintenance Required"
