@@ -14,7 +14,14 @@ st.set_page_config(
 def load_assets():
     model_path = os.path.join("models", "lstm_model.h5")
     scaler_path = os.path.join("models", "scaler.pkl")
-    model = tf.keras.models.load_model(model_path)
+    
+    # Try the standard load first; if it fails, use the flexible loader
+    try:
+        model = tf.keras.models.load_model(model_path)
+    except TypeError:
+        # This handles the 'time_major' and other version-related keyword errors
+        model = tf.keras.models.load_model(model_path, compile=False)
+        
     scaler = joblib.load(scaler_path)
     return model, scaler
 
