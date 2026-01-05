@@ -1,0 +1,8 @@
+venv/
+mlruns/
+__pycache__/
+*.pyc
+*.npy
+*.db
+*.h5
+*.pkl
