@@ -15,16 +15,14 @@ def load_assets():
     model_path = os.path.join("models", "lstm_model.h5")
     scaler_path = os.path.join("models", "scaler.pkl")
     
-    # Try the standard load first; if it fails, use the flexible loader
-    try:
-        model = tf.keras.models.load_model(model_path)
-    except TypeError:
-        # This handles the 'time_major' and other version-related keyword errors
-        model = tf.keras.models.load_model(model_path, compile=False)
-        
+    # Load model without compiling to bypass version-specific LSTM arguments
+    model = tf.keras.models.load_model(model_path, compile=False)
+    
+    # Re-compile manually with basics to ensure it's ready for predict()
+    model.compile(optimizer='adam', loss='mse')
+    
     scaler = joblib.load(scaler_path)
     return model, scaler
-
 try:
     model, scaler = load_assets()
 except Exception as e:
