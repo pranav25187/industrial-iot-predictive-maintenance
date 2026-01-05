@@ -66,12 +66,6 @@ industrial-iot-predictive-maintenance/
 - Gauge indicator  
 <img width="1494" height="350" alt="newplot" src="https://github.com/user-attachments/assets/642cb83b-4e7c-4698-922d-4d6c3197a7ea" />
 
-
-```markdown
-![Dashboard Overview](images/dashboard_overview.png)
-![RUL Prediction](images/rul_prediction.png)
-````
-
 ---
 
 ## ⚙️ Local Setup Instructions
@@ -200,11 +194,12 @@ http://localhost:5000
 
 **Pranav**
 Final Year Computer Engineering Student
-Aspiring **ML / Data / MLOps Engineer**
+Aspiring **ML Engineer**
 
 ---
 
 ## 📜 License
 
 This project is intended for **educational and demonstration purposes**.
+
 
